@@ -76,9 +76,17 @@ model_options:
       type: bool
       description: "Set to true to use the previously transcribed text as a prompt for the next transcription request."
     vad_filter:
-      value: false
+      value: true
       type: bool
-      description: "Set to true to use a voice activity detection (VAD) filter to remove silence from the recording."
+      description: "Set to true to use a voice activity detection (VAD) filter to remove silence from the recording. Recommended to prevent hallucinations during silent sections."
+    repetition_penalty:
+      value: 1.3
+      type: float
+      description: "Penalizes tokens that already appeared in the output. Higher values (1.1-1.5) reduce repetitive loops. Set to 1.0 to disable."
+    no_repeat_ngram_size:
+      value: 4
+      type: int
+      description: "Prevents the model from repeating any n-gram of this size. Set to 4 to prevent 4-word phrases from repeating. Set to 0 to disable."
     model_path:
       value: null
       type: str

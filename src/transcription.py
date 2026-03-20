@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import numpy as np
 import soundfile as sf
 from faster_whisper import WhisperModel
@@ -55,13 +56,50 @@ def transcribe_local(audio_data, local_model=None):
     # Convert int16 to float32
     audio_data_float = audio_data.astype(np.float32) / 32768.0
 
-    response = local_model.transcribe(audio=audio_data_float,
-                                      language=model_options['common']['language'],
-                                      initial_prompt=model_options['common']['initial_prompt'],
-                                      condition_on_previous_text=model_options['local']['condition_on_previous_text'],
-                                      temperature=model_options['common']['temperature'],
-                                      vad_filter=model_options['local']['vad_filter'],)
-    return ''.join([segment.text for segment in list(response[0])])
+    # PATCH: anti-repetition settings
+    # - repetition_penalty > 1.0 penalizes tokens that already appeared (1.3 = strong)
+    # - no_repeat_ngram_size prevents exact n-gram repeats (e.g., 4 = no 4-word phrase repeated)
+    # - condition_on_previous_text=false avoids context saturation on long recordings
+    # - temperature fallback: if 0.0 produces garbage, retry with slight randomness
+    local_opts = model_options['local']
+    response = local_model.transcribe(
+        audio=audio_data_float,
+        language=model_options['common']['language'],
+        initial_prompt=model_options['common']['initial_prompt'],
+        condition_on_previous_text=local_opts.get('condition_on_previous_text', False),
+        temperature=model_options['common']['temperature'],
+        vad_filter=local_opts.get('vad_filter', True),
+        repetition_penalty=local_opts.get('repetition_penalty', 1.3),
+        no_repeat_ngram_size=local_opts.get('no_repeat_ngram_size', 4),
+    )
+
+    text = ''.join([segment.text for segment in list(response[0])])
+
+    # PATCH: post-hoc repetition detection — catch any loops that slip through
+    text = _remove_repetitions(text)
+    return text
+
+
+def _remove_repetitions(text, max_repeats=2):
+    """
+    Detect and collapse repeated phrases in transcription output.
+    Catches patterns like "in modo tale che in modo tale che in modo tale che..."
+    and reduces them to at most max_repeats occurrences.
+    """
+    # Match any phrase (3-30 words) repeated 3+ times consecutively
+    pattern = r'((?:\S+\s+){3,30}?)\1{2,}'
+
+    def _collapse(match):
+        phrase = match.group(1)
+        return (phrase * max_repeats).strip() + ' '
+
+    cleaned = re.sub(pattern, _collapse, text, flags=re.IGNORECASE)
+
+    # Also catch shorter repeats (1-3 words repeated 4+ times)
+    short_pattern = r'((?:\S+\s+){1,3})\1{3,}'
+    cleaned = re.sub(short_pattern, _collapse, cleaned, flags=re.IGNORECASE)
+
+    return cleaned.strip()
 
 def transcribe_api(audio_data):
     """
