@@ -66,7 +66,7 @@ Your transcription is never lost, even if you're in the wrong window:
 | `Shift+F10` | Cycle backward through history (press repeatedly to go further back) |
 | `Ctrl+V` | Paste from clipboard (every transcription is auto-copied) |
 
-- **History window**: Right-click the tray icon (bottom-right) and select "History" to browse all transcriptions. Click an entry to paste it, double-click to copy only.
+- **History window**: Right-click the tray icon (bottom-right) and select "History" to browse all transcriptions. Left-click an entry to paste it into the active window, right-click to copy to clipboard only.
 - **History buffer**: The last 10 transcriptions are kept in memory.
 - **Auto-clipboard**: Every transcription is automatically copied to your clipboard.
 
