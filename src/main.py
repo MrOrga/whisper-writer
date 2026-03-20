@@ -1,6 +1,25 @@
 import os
 import sys
 import time
+
+# PATCH: Add nvidia CUDA DLLs to PATH (cublas, etc.)
+_nvidia_bin = os.path.join(sys.prefix, 'Lib', 'site-packages', 'nvidia', 'cublas', 'bin')
+if os.path.isdir(_nvidia_bin):
+    os.environ['PATH'] = _nvidia_bin + os.pathsep + os.environ.get('PATH', '')
+    os.add_dll_directory(_nvidia_bin)
+
+# PATCH: Load CUDA model BEFORE PyQt5 to avoid segfault (Qt OpenGL + CUDA conflict)
+from utils import ConfigManager
+ConfigManager.initialize()
+_preloaded_model = None
+if ConfigManager.config_file_exists():
+    model_options = ConfigManager.get_config_section('model_options')
+    if not model_options.get('use_api'):
+        from transcription import create_local_model
+        print('Pre-loading CUDA model before Qt...')
+        _preloaded_model = create_local_model()
+        print('Model pre-loaded OK')
+
 from audioplayer import AudioPlayer
 from pynput.keyboard import Controller
 from PyQt5.QtCore import QObject, QProcess
@@ -14,7 +33,6 @@ from ui.settings_window import SettingsWindow
 from ui.status_window import StatusWindow
 from transcription import create_local_model
 from input_simulation import InputSimulator
-from utils import ConfigManager
 
 
 class WhisperWriterApp(QObject):
@@ -50,7 +68,7 @@ class WhisperWriterApp(QObject):
 
         model_options = ConfigManager.get_config_section('model_options')
         model_path = model_options.get('local', {}).get('model_path')
-        self.local_model = create_local_model() if not model_options.get('use_api') else None
+        self.local_model = _preloaded_model if _preloaded_model else (create_local_model() if not model_options.get('use_api') else None)
 
         self.result_thread = None
 
