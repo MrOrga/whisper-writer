@@ -64,20 +64,10 @@ class HistoryEntry(QFrame):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._click_timer_single = True
-            from PyQt5.QtCore import QTimer
-            QTimer.singleShot(250, lambda: self._handle_click())
-        super().mousePressEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._click_timer_single = False
-            self.doubleClicked.emit(self.text)
-        super().mouseDoubleClickEvent(event)
-
-    def _handle_click(self):
-        if getattr(self, '_click_timer_single', False):
             self.clicked.emit(self.text)
+        elif event.button() == Qt.RightButton:
+            self.doubleClicked.emit(self.text)
+        super().mousePressEvent(event)
 
 
 class HistoryWindow(BaseWindow):
@@ -92,7 +82,7 @@ class HistoryWindow(BaseWindow):
 
     def initHistoryUI(self):
         # Hint label
-        self.hint_label = QLabel('Click = paste into active window  |  Double-click = copy only')
+        self.hint_label = QLabel('Left click = paste into active window  |  Right click = copy only')
         self.hint_label.setFont(QFont('Segoe UI', 8))
         self.hint_label.setStyleSheet("color: #888;")
         self.hint_label.setAlignment(Qt.AlignCenter)
