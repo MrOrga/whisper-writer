@@ -276,11 +276,17 @@ class KeyListener:
     Manages input backends and listens for specific key combinations.
     """
 
-    def __init__(self):
-        """Initialize the KeyListener with backends and activation keys."""
+    def __init__(self, activation_key=None):
+        """
+        Initialize the KeyListener with backends and activation keys.
+
+        :param activation_key: Optional override for the activation key (e.g., 'f10').
+                               If None, reads from config 'recording_options.activation_key'.
+        """
         self.backends = []
         self.active_backend = None
         self.key_chord = None
+        self._activation_key_override = activation_key
         self.callbacks = {
             "on_activate": [],
             "on_deactivate": []
@@ -352,8 +358,8 @@ class KeyListener:
             self.active_backend.stop()
 
     def load_activation_keys(self):
-        """Load activation keys from configuration."""
-        key_combination = ConfigManager.get_config_value('recording_options', 'activation_key')
+        """Load activation keys from configuration or override."""
+        key_combination = self._activation_key_override or ConfigManager.get_config_value('recording_options', 'activation_key')
         keys = self.parse_key_combination(key_combination)
         self.set_activation_keys(keys)
 

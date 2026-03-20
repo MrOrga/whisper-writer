@@ -98,6 +98,14 @@ recording_options:
     value: ctrl+shift+space
     type: str
     description: "The keyboard shortcut to activate the recording and transcribing process. Separate keys with a '+'."
+  replay_key:
+    value: f10
+    type: str
+    description: "The keyboard shortcut to re-type the last transcription into the active window. Useful if the text was typed into the wrong window."
+  copy_to_clipboard:
+    value: true
+    type: bool
+    description: "Set to true to automatically copy each transcription to the clipboard. Allows Ctrl+V as a fallback if text lands in the wrong window."
   input_backend:
     value: auto
     type: str

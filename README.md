@@ -56,6 +56,16 @@ That's it. The setup script:
 4. Press `Ctrl+Shift+Space` to start recording
 5. Talk, pause, and the text appears in your active window
 
+## Replay & Clipboard (new in this fork)
+
+Your transcription is never lost, even if you're in the wrong window:
+
+- **Auto-clipboard**: Every transcription is automatically copied to your clipboard. If the text lands in the wrong window, just `Ctrl+V` in the right one.
+- **Replay hotkey** (`F10` by default): Press F10 to re-type the last transcription into whatever window is focused. You can press it as many times as you want.
+- **History buffer**: The last 10 transcriptions are kept in memory. Replay always uses the most recent one.
+
+Both features are configurable in Settings (`replay_key`, `copy_to_clipboard`).
+
 ## Recording Modes
 
 - **continuous** (default): Records until you pause. Transcribes, then starts recording again. Press hotkey to stop.

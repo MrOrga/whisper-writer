@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from collections import deque
 
 # PATCH: Add nvidia CUDA DLLs to PATH (cublas, etc.)
 _nvidia_bin = os.path.join(sys.prefix, 'Lib', 'site-packages', 'nvidia', 'cublas', 'bin')
@@ -62,9 +63,20 @@ class WhisperWriterApp(QObject):
         """
         self.input_simulator = InputSimulator()
 
+        # PATCH: Transcription history for replay feature
+        self.last_transcription = None
+        self.transcription_history = deque(maxlen=10)
+
+        # Main key listener (record)
         self.key_listener = KeyListener()
         self.key_listener.add_callback("on_activate", self.on_activation)
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
+
+        # PATCH: Replay key listener — re-types last transcription
+        self.replay_listener = KeyListener(
+            activation_key=ConfigManager.get_config_value('recording_options', 'replay_key') or 'f10'
+        )
+        self.replay_listener.add_callback("on_activate", self.on_replay_activation)
 
         model_options = ConfigManager.get_config_section('model_options')
         model_path = model_options.get('local', {}).get('model_path')
@@ -74,7 +86,7 @@ class WhisperWriterApp(QObject):
 
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)
-        self.main_window.startListening.connect(self.key_listener.start)
+        self.main_window.startListening.connect(self._start_all_listeners)
         self.main_window.closeApp.connect(self.exit_app)
 
         if not ConfigManager.get_config_value('misc', 'hide_status_window'):
@@ -106,9 +118,16 @@ class WhisperWriterApp(QObject):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
+    def _start_all_listeners(self):
+        """Start both the recording and replay key listeners."""
+        self.key_listener.start()
+        self.replay_listener.start()
+
     def cleanup(self):
         if self.key_listener:
             self.key_listener.stop()
+        if hasattr(self, 'replay_listener') and self.replay_listener:
+            self.replay_listener.stop()
         if self.input_simulator:
             self.input_simulator.cleanup()
 
@@ -184,6 +203,17 @@ class WhisperWriterApp(QObject):
         """
         When the transcription is complete, type the result and start listening for the activation key again.
         """
+        # PATCH: Save transcription for replay
+        if result and result.strip():
+            self.last_transcription = result
+            self.transcription_history.append(result)
+            ConfigManager.console_print(f'Transcription saved to history ({len(self.transcription_history)} entries)')
+
+            # PATCH: Copy to clipboard if enabled
+            if ConfigManager.get_config_value('recording_options', 'copy_to_clipboard'):
+                QApplication.clipboard().setText(result.strip())
+                ConfigManager.console_print('Transcription copied to clipboard')
+
         self.input_simulator.typewrite(result)
 
         if ConfigManager.get_config_value('misc', 'noise_on_completion'):
@@ -193,6 +223,17 @@ class WhisperWriterApp(QObject):
             self.start_result_thread()
         else:
             self.key_listener.start()
+
+    def on_replay_activation(self):
+        """
+        PATCH: Called when the replay key is pressed. Re-types the last transcription.
+        """
+        if not self.last_transcription:
+            ConfigManager.console_print('Replay: no transcription in history')
+            return
+
+        ConfigManager.console_print(f'Replaying last transcription: {self.last_transcription[:50]}...')
+        self.input_simulator.typewrite(self.last_transcription)
 
     def run(self):
         """

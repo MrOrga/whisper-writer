@@ -29,6 +29,8 @@ post_processing:
   writing_key_press_delay: 0.005
 recording_options:
   activation_key: f9
+  replay_key: f10
+  copy_to_clipboard: true
   input_backend: auto
   min_duration: 100
   recording_mode: press_to_toggle
